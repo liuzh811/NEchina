@@ -3095,11 +3095,97 @@ plot(r3)
 plot(r3_firepoly1, add = T)
 
 
+#MODIS burned area data did not detect any burned area in this area
 
-#find unique patches
-library(SDMTools)
-ccl.2003 = ConnCompLabel(Year_burndate[[3]]) #find unique connected patches
 
+#############downland modis fire hotspot in this area to validate the results
+#download data from http://modis-fire.umd.edu/pages/ActiveFire.php?target=GetData
+# ftp://fuoco.geog.umd.edu/
+
+#decompress the zip files
+install.packages("R.utils")
+
+library(R.utils)
+
+file.names = list.files(path = "./MCD14MLV5", pattern = "*.gz$")
+
+fire.df = c()
+
+for (i in 1:length(file.names)){
+
+
+gunzip(paste("./MCD14MLV5/", file.names[i], sep = ""))
+
+file.tmp = substr(file.names[i], 1, nchar(file.names[i])-3)
+file.tmp = data.frame(read.table(paste("./MCD14MLV5/", file.tmp, sep = ""), header = TRUE))
+
+file.tmp = file.tmp[which(file.tmp$lon > 121 & file.tmp$lon < 127 & file.tmp$lat > 50 & file.tmp$lat < 53.5),]
+
+fire.df = rbind(fire.df, file.tmp)
+
+print(paste("Finishing for extracting ", i, " of ", length(file.names), " at ", format(Sys.time(), "%a %b %d %X %Y"), sep = " ") )
+
+}
+
+plot(density(fire.df$FRP), xlim = c(0,120))
+plot(density(fire.df$conf), xlim = c(0,120))
+
+#change into spatial database
+library(sp)
+fire.sp <- fire.df[which(fire.df$conf > 50),]
+coordinates(fire.sp) <- ~lon+lat
+projection(fire.sp) <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"
+
+
+dxal <- readOGR(dsn = "D:/users/Zhihua/Landsat/XinganImages/boundry", layer = "dxal_bj_proj_polygon")
+proj.utm = projection(dxal)
+proj.geo = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0 "
+dxal.geo = spTransform(dxal, CRS(proj.geo))
+
+fire.sp.hz = fire.sp[dxal.geo[3,], ]
+
+fire.sp.hz = spTransform(fire.sp.hz, CRS(proj.utm))
+#read into test area
+#for rest area 1
+#read into test areas
+r1 = readOGR(dsn=".\\BEAD_ploys",layer="testr1")
+
+r1_firepoly1 = readOGR(dsn=".\\BEAD_ploys",layer="testr1_4_r4_ndvi")
+r1_firepoly2 = readOGR(dsn=".\\BEAD_ploys",layer="testr1_4_r4_ndvi_90_2")
+
+r1_firepoly1 = r1_firepoly1[which(r1_firepoly1@data$dist_time > 0),]
+r1_firepoly2 = r1_firepoly2[which(r1_firepoly2@data$dist_time > 0),]
+
+r1_val = readOGR(dsn=".\\BEAD_ploys",layer="testr1_validation")
+
+#for rest area 3
+#read into test areas
+r3 = readOGR(dsn=".\\BEAD_ploys",layer="testr3")
+
+r3_firepoly1 = readOGR(dsn=".\\BEAD_ploys",layer="testr3_1_r4_ndvi_90_2")
+r3_firepoly2 = readOGR(dsn=".\\BEAD_ploys",layer="testr3_4_r4_ndvi_90_2")
+
+r3_firepoly1 = r3_firepoly1[which(r3_firepoly1@data$dist_time > 0),]
+r3_firepoly2 = r3_firepoly2[which(r3_firepoly2@data$dist_time > 0),]
+
+r3_val = readOGR(dsn=".\\BEAD_ploys",layer="testr3_validation")
+
+fire.sp.hz.r1 = fire.sp.hz[r1,]
+fire.sp.hz.r3 = fire.sp.hz[r3,]
+
+#plot to see the results
+plot(r3)
+plot(fire.sp.hz.r3, add = T)
+plot(r3_firepoly2, add =T, border = "blue")
+plot(r3_firepoly1, add =T, border = "red")
+plot(r3_val, add =T, border = "green")
+
+plot(r1)
+plot(fire.sp.hz.r1, add = T)
+plot(r1_firepoly2, add =T, border = "blue")
+plot(r1_firepoly1, add =T, border = "red")
+
+plot(r1_val, add =T, border = "green")
 
 
 
