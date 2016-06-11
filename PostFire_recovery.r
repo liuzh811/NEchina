@@ -3140,23 +3140,6 @@ r3_firepoly1 = readOGR(dsn=".\\BEAD_ploys",layer="testr3_1_r4_ndvi_90_2")
 r3_firepoly2 = readOGR(dsn=".\\BEAD_ploys",layer="testr3_4_r4_ndvi_90_2")
 
 
-par(mfrow=c(2,1),mar=c(0,0,0,0))
-plot(ba.grd1, legend=FALSE, axes=FALSE, box=FALSE)
-plot(r1_firepoly2, border = "black", lwd = 2, add = T)
-plot(fire.sp1[1,], border = "black", lwd = 2, add = T)
-
-plot(fire.sp1, border = "red", lwd = 2, add = T)
-scalebar(10000, xy=c(505000, 5742500), type='bar', divs=4,below = "Meter")
-text(x=510000, y=5767000, "Region 1", cex = 1.5)
-
-
-plot(ba.grd3, legend=FALSE, axes=FALSE, box=FALSE)
-plot(r3_firepoly2, border = "black", lwd = 2, add = T)
-plot(fire.sp3, border = "red", lwd = 2, add = T)
-
-scalebar(10000, xy=c(498000, 5680000), type='bar', divs=4,below = "Meter")
-text(x=500000, y=5700000, "Region 2", cex = 1.5)
-
 #MODIS burned area data did not detect any burned area in this area
 
 
@@ -3169,17 +3152,16 @@ install.packages("R.utils")
 
 library(R.utils)
 
-file.names = list.files(path = "./MCD14MLV5", pattern = "*.gz$")
+# file.names = list.files(path = "./MCD14MLV5", pattern = "*.gz$")
+file.names = list.files(path = "./MCD14MLV5", pattern = "*.asc$")
 
 fire.df = c()
 
 for (i in 1:length(file.names)){
+#gunzip(paste("./MCD14MLV5/", file.names[i], sep = ""))
 
-
-gunzip(paste("./MCD14MLV5/", file.names[i], sep = ""))
-
-file.tmp = substr(file.names[i], 1, nchar(file.names[i])-3)
-file.tmp = data.frame(read.table(paste("./MCD14MLV5/", file.tmp, sep = ""), header = TRUE))
+#file.tmp = substr(file.names[i], 1, nchar(file.names[i])-3)
+file.tmp = data.frame(read.table(paste("./MCD14MLV5/", file.names[i], sep = ""), header = TRUE))
 
 file.tmp = file.tmp[which(file.tmp$lon > 121 & file.tmp$lon < 127 & file.tmp$lat > 50 & file.tmp$lat < 53.5),]
 
@@ -3198,8 +3180,7 @@ fire.sp <- fire.df[which(fire.df$conf > 50),]
 coordinates(fire.sp) <- ~lon+lat
 projection(fire.sp) <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"
 
-
-dxal <- readOGR(dsn = "D:/users/Zhihua/Landsat/XinganImages/boundry", layer = "dxal_bj_proj_polygon")
+#dxal <- readOGR(dsn = "D:/users/Zhihua/Landsat/XinganImages/boundry", layer = "dxal_bj_proj_polygon")
 proj.utm = projection(dxal)
 proj.geo = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0 "
 dxal.geo = spTransform(dxal, CRS(proj.geo))
@@ -3207,8 +3188,34 @@ dxal.geo = spTransform(dxal, CRS(proj.geo))
 fire.sp.hz = fire.sp[dxal.geo[3,], ]
 
 fire.sp.hz = spTransform(fire.sp.hz, CRS(proj.utm))
-#read into test area
-#for rest area 1
+
+#crop into test area
+fire.sp.hz1 = fire.sp.hz[r1, ]
+fire.sp.hz3 = fire.sp.hz[r3, ]
+
+
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+plot(ba.grd1, legend=FALSE, axes=FALSE, box=FALSE)
+plot(r1_firepoly2, border = "black", lwd = 2, add = T)
+plot(fire.sp1[1,], border = "black", lwd = 2, add = T)
+
+plot(fire.sp1, border = "red", lwd = 2, add = T)
+plot(fire.sp.hz1, add = TRUE, pch = 20, col = "blue")
+
+scalebar(10000, xy=c(505000, 5742500), type='bar', divs=4,below = "Meter")
+text(x=510000, y=5767000, "Region 1", cex = 1.5)
+
+
+plot(ba.grd3, legend=FALSE, axes=FALSE, box=FALSE)
+plot(r3_firepoly2, border = "black", lwd = 2, add = T)
+plot(fire.sp3, border = "red", lwd = 2, add = T)
+plot(fire.sp.hz3, add = TRUE, pch = 20, col = "blue")
+
+scalebar(10000, xy=c(498000, 5680000), type='bar', divs=4,below = "Meter")
+text(x=500000, y=5700000, "Region 2", cex = 1.5)
+
+
+
 #read into test areas
 r1 = readOGR(dsn=".\\BEAD_ploys",layer="testr1")
 
