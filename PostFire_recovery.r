@@ -2951,12 +2951,31 @@ runGdal(product="MCD45A1",  #VI/combined/Tile/500m/monthly
 
 
 ################## extracting individual fires #############################
+# 6/11/2016 at U of M
+
+# load libraries
+library(MODIS)
+library(rgdal)
+library(raster)
+
+wkdir <- "F:/Rosa/Landsat/MODIS_validation"
+setwd(wkdir)
+
+#set spatial extent
+dxal <- readOGR(dsn = "F:/Rosa/Landsat/XinganImages/boundry", layer = "dxal_bj_proj_polygon")
+proj.utm = projection(dxal)
+proj.geo = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0 "
+
 ba_date = preStack(path=".\\MCD45A1", pattern="*.burndate.tif$")
 ba_quality = preStack(path=".\\MCD45A1", pattern="*.ba_qa.tif$")
 
 #1. produce yearly burned area data
 YearDOY = substr(ba_date, 20, 26)
-Year2010 = which(substr(YearDOY, 1, 4)=="2010")
+
+ba.list = list()
+
+for (yr in 2000:2015){
+Year2010 = which(substr(YearDOY, 1, 4)==as.character(yr))
 
 ba_date2010 = stack(ba_date[Year2010])
 ba_quality2010 = stack(ba_quality[Year2010])
@@ -2971,7 +2990,7 @@ for (i in 1:nlayers(ba_date2010)) {
 # to assess whether there are multiple burn or not within one year
 Non.zero.length = function(x){length(which(x > 0))}
 date2010_freq = calc(ba_date2010, Non.zero.length)
-freq(ba_date2010_1)
+#freq(ba_date2010_1)
 
 # pixels with multple date usually have the same date, but may contain some have different date, 
 # use the first date to assign the date information
@@ -3005,10 +3024,32 @@ date2010.sp2 = rasterize(date2010.sp2,date2010_freq2, field = "date")
 
 date2010.sp2[date2010.sp2 > 273] = NA
 
+ba.list[[yr - 1999]] = date2010.sp2
+
+print(paste("Finish Extracting Year ", yr, " at ", format(Sys.time(), "%a %b %d %X %Y"), sep = " ") )
+
+}
+
+ba.list = stack(ba.list)
+ba.list = crop(ba.list, dxal[3,])
+
+#plot
+names(ba.list) <- paste("Year", 2000:2015, sep = "")
+ba.list2 = ba.list
+
+#produce one raster, and get the burn date from the rasterStack
+ba.grd = ba.list2[[1]]; ba.grd[] = 0
+for (i in 1:nlayers(ba.list2)){
+ba.grd[!is.na(ba.list2[[i]])] = ba.list2[[i]][!is.na(ba.list2[[i]])] + (i+1999)*1000
+}
+
+writeRaster(ba.grd,"F:/Rosa/Landsat/MODIS_validation/results/ba00-15.tif",format="GTiff", overwrite=TRUE) #write a raster stack files
+
 #plot to see the figure
 plot(date2010.sp2)
 plot(dxal, add = T)
 
+#########START DO NOT USE: BLOCK 1 ############ 
 ################## extracting individual fires #############################
 ########### batch processing start from here
 Year = 2001:2015
@@ -3019,6 +3060,8 @@ Year2010 = which(as.numeric(substr(YearDOY, 1, 4))==year)
 
 ba_date2010 = stack(ba_date[Year2010])
 ba_quality2010 = stack(ba_quality[Year2010])
+
+}
 
 # remove bad data based on data quality
 for (i in 1:nlayers(ba_date2010)) {
@@ -3071,29 +3114,48 @@ Year_burndate_hz = crop(Year_burndate, dxal[3,])
 plot(Year_burndate_hz[[3]])
 plot(dxal, add = T)
 
-#for rest area 1
+#########END DO NOT USE: BLOCK 1 ############ 
+
+fire.sp = readOGR(dsn="F:/Elias/XinganTM/GIS_data","FirePatch") # manual digitized fire polygon
+
+# PLOTING
+#for test area 1
 #read into test areas
+require("rgeos")
 r1 = readOGR(dsn=".\\BEAD_ploys",layer="testr1")
 
-Year_burndate_r1 = crop(Year_burndate, r1)
+fire.sp1 = crop(fire.sp, r1)
+ba.grd1 = crop(ba.grd, r1)
 
 r1_firepoly1 = readOGR(dsn=".\\BEAD_ploys",layer="testr1_4_r4_ndvi")
 r1_firepoly2 = readOGR(dsn=".\\BEAD_ploys",layer="testr1_4_r4_ndvi_90_2")
 
-
-#for rest area 3
+#for test area 3
 #read into test areas
 r3 = readOGR(dsn=".\\BEAD_ploys",layer="testr3")
-
-Year_burndate_r3 = crop(Year_burndate, r3)
+fire.sp3 = crop(fire.sp, r3)
+ba.grd3 = crop(ba.grd, r3)
 
 r3_firepoly1 = readOGR(dsn=".\\BEAD_ploys",layer="testr3_1_r4_ndvi_90_2")
 r3_firepoly2 = readOGR(dsn=".\\BEAD_ploys",layer="testr3_4_r4_ndvi_90_2")
 
-plot(Year_burndate_r3[[8]])
-plot(r3)
-plot(r3_firepoly1, add = T)
 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+plot(ba.grd1, legend=FALSE, axes=FALSE, box=FALSE)
+plot(r1_firepoly2, border = "black", lwd = 2, add = T)
+plot(fire.sp1[1,], border = "black", lwd = 2, add = T)
+
+plot(fire.sp1, border = "red", lwd = 2, add = T)
+scalebar(10000, xy=c(505000, 5742500), type='bar', divs=4,below = "Meter")
+text(x=510000, y=5767000, "Region 1", cex = 1.5)
+
+
+plot(ba.grd3, legend=FALSE, axes=FALSE, box=FALSE)
+plot(r3_firepoly2, border = "black", lwd = 2, add = T)
+plot(fire.sp3, border = "red", lwd = 2, add = T)
+
+scalebar(10000, xy=c(498000, 5680000), type='bar', divs=4,below = "Meter")
+text(x=500000, y=5700000, "Region 2", cex = 1.5)
 
 #MODIS burned area data did not detect any burned area in this area
 
@@ -3188,6 +3250,23 @@ plot(r1_firepoly1, add =T, border = "red")
 plot(r1_val, add =T, border = "green")
 
 
+########################################################
+#6/11/2016 at U of Montana
+#
+setwd("F:/Elias/XinganTM/GIS_data")
+
+library(rgdal)
+library(raster)
+library(maptools)
+
+########################################################################################################
+############### begin of reading into validation fire  and bead-extracted fire patches #################
+#read tested regions
+testr1 = readOGR(dsn=".",layer="testr1")
+testr3 = readOGR(dsn=".",layer="testr3")
+
+#read validation fire patches 
+fire.sp <- readOGR(".", "FirePatch")
 
 
 
