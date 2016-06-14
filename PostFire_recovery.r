@@ -3193,27 +3193,31 @@ fire.sp.hz = spTransform(fire.sp.hz, CRS(proj.utm))
 fire.sp.hz1 = fire.sp.hz[r1, ]
 fire.sp.hz3 = fire.sp.hz[r3, ]
 
+######## plot final ######
+#par(mfrow=c(2,1),mar=c(0,0,0,0))
 
-par(mfrow=c(2,1),mar=c(0,0,0,0))
+png("region1-2.png",height = 3000, width = 3000, res = 300, units = "px")
+
 plot(ba.grd1, legend=FALSE, axes=FALSE, box=FALSE)
-plot(r1_firepoly2, border = "black", lwd = 2, add = T)
-plot(fire.sp1[1,], border = "black", lwd = 2, add = T)
-
-plot(fire.sp1, border = "red", lwd = 2, add = T)
+plot(r1_firepoly2[!is.na(r1_firepoly2$dist_time),], border = "black", lwd = 2, add = TRUE)
+plot(fire.sp1[1,], border = "black", lwd = 2, add = TRUE)
+#plot(fire.sp1, border = "red", lwd = 2, add = TRUE)
 plot(fire.sp.hz1, add = TRUE, pch = 20, col = "blue")
 
 scalebar(10000, xy=c(505000, 5742500), type='bar', divs=4,below = "Meter")
-text(x=510000, y=5767000, "Region 1", cex = 1.5)
+#text(x=510000, y=5767000, "Region 1", cex = 1.5)
+dev.off()
 
+png("region2-2.png",height = 3000, width = 4500, res = 300, units = "px")
 
 plot(ba.grd3, legend=FALSE, axes=FALSE, box=FALSE)
-plot(r3_firepoly2, border = "black", lwd = 2, add = T)
-plot(fire.sp3, border = "red", lwd = 2, add = T)
+plot(r3_firepoly2[!is.na(r3_firepoly2$dist_time),], border = "black", lwd = 2, add = T)
+#plot(fire.sp3, border = "red", lwd = 2, add = T)
 plot(fire.sp.hz3, add = TRUE, pch = 20, col = "blue")
 
 scalebar(10000, xy=c(498000, 5680000), type='bar', divs=4,below = "Meter")
-text(x=500000, y=5700000, "Region 2", cex = 1.5)
-
+#text(x=500000, y=5700000, "Region 2", cex = 1.5)
+dev.off()
 
 
 #read into test areas
